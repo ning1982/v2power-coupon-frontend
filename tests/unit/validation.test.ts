@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { redeemSchema } from '../../src/lib/validation'
 describe('redeemSchema single Email', () => {
-  const valid = { email: 'zhilin.zhang@v2power.io', token: 'V2PTEST1234', consent: true }
+  const valid = { email: 'zhilin.zhang@v2power.io', token: 'V2P-TEST1234', consent: true }
   it('accepts valid single email', () => {
     expect(redeemSchema.safeParse(valid).success).toBe(true)
   })
@@ -15,9 +15,9 @@ describe('redeemSchema single Email', () => {
   it('rejects empty token', () => {
     expect(redeemSchema.safeParse({ ...valid, token: '' }).success).toBe(false)
   })
-  it('normalizes token', () => {
+  it('normalizes token (keeps hyphen, strips whitespace)', () => {
     const r = redeemSchema.safeParse({ ...valid, token: ' v2p-test 1234 ' })
-    expect(r.success && r.data.token).toBe('V2PTEST1234')
+    expect(r.success && r.data.token).toBe('V2P-TEST1234')
   })
   it('requires consent', () => {
     expect(redeemSchema.safeParse({ ...valid, consent: false }).success).toBe(false)

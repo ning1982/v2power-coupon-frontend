@@ -1,39 +1,70 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap');
 @import "tailwindcss";
+@import "./m3-tokens-light.css";
 
-:root{
-  --v2-navy:#071E33;
-  --v2-navy-2:#0A2F4F;
-  --v2-teal:#00E5CC;
-  --v2-teal-dim:#00C2A8;
-  --v2-amber:#FFD23F;
-  --v2-ink:#0F172A;
-  --v2-cloud:#F1F5F9;
+/* Tailwind 4 @theme：把 M3 token 桥接成语义化 utility（Mason 复审建议，
+   杜绝 JSX 里散落 bg-[var(--md-*)] 的任意值泥潭） */
+@theme {
+  --color-primary: var(--md-sys-color-primary);
+  --color-on-primary: var(--md-sys-color-on-primary);
+  --color-primary-container: var(--md-sys-color-primary-container);
+  --color-on-primary-container: var(--md-sys-color-on-primary-container);
+  --color-secondary-container: var(--md-sys-color-secondary-container);
+  --color-on-secondary-container: var(--md-sys-color-on-secondary-container);
+  --color-surface: var(--md-sys-color-surface);
+  --color-surface-lowest: var(--md-sys-color-surface-container-lowest);
+  --color-surface-low: var(--md-sys-color-surface-container-low);
+  --color-surface-container: var(--md-sys-color-surface-container);
+  --color-surface-high: var(--md-sys-color-surface-container-high);
+  --color-on-surface: var(--md-sys-color-on-surface);
+  --color-on-surface-variant: var(--md-sys-color-on-surface-variant);
+  --color-outline: var(--md-sys-color-outline);
+  --color-outline-variant: var(--md-sys-color-outline-variant);
+  --color-error: var(--md-sys-color-error);
+  --color-error-container: var(--md-sys-color-error-container);
+  --color-on-error-container: var(--md-sys-color-on-error-container);
+
+  /* 后台语义色（M3 无 success，后台状态需要） */
+  --color-success: #146c2e;
+  --color-on-success: #ffffff;
+  --color-success-container: #d3f4dc;
+  --color-on-success-container: #0a3d1c;
+
+  --radius-m3-xs: var(--md-sys-shape-corner-extra-small);
+  --radius-m3-sm: var(--md-sys-shape-corner-small);
+  --radius-m3-md: var(--md-sys-shape-corner-medium);
+  --radius-m3-lg: var(--md-sys-shape-corner-large);
+
+  --shadow-m3-1: var(--md-elevation-1);
+
+  --animate-shake: shake 0.32s;
 }
-html{scroll-behavior:smooth}
-body{
-  font-family:"Inter",system-ui,-apple-system,sans-serif;
-  background:
-    radial-gradient(900px 500px at 15% -10%, rgba(0,229,204,0.18), transparent 60%),
-    radial-gradient(800px 600px at 95% 0%, rgba(255,210,63,0.12), transparent 60%),
-    linear-gradient(180deg, #F8FAFC 0%, #EEF2F7 100%);
-  color:var(--v2-ink);
-  -webkit-font-smoothing:antialiased;
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-5px); }
+  40%, 80% { transform: translateX(5px); }
 }
-.display{font-family:"Space Grotesk",sans-serif; letter-spacing:-0.02em}
-.mono{font-family:"JetBrains Mono",monospace}
-.grid-pattern{
-  background-image:
-    linear-gradient(rgba(7,30,51,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(7,30,51,0.04) 1px, transparent 1px);
-  background-size:32px 32px;
+
+html {
+  scroll-behavior: smooth;
 }
-.pulse{animation:pulse 2s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
-.shimmer{position:relative; overflow:hidden}
-.shimmer::after{
-  content:""; position:absolute; inset:0;
-  background:linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent);
-  transform:translateX(-100%); animation:shimmer 2.2s infinite;
+
+body {
+  font-family: var(--md-ref-typeface-plain);
+  background: var(--md-sys-color-surface-low);
+  color: var(--md-sys-color-on-surface);
+  -webkit-font-smoothing: antialiased;
 }
-@keyframes shimmer{100%{transform:translateX(100%)}}
+
+/* 全局键盘/外设焦点可见性（Kai a11y 复审：原 outline:none 导致焦点隐形） */
+:focus-visible {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

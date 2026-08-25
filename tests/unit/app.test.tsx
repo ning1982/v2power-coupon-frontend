@@ -4,14 +4,14 @@ import { render, screen } from '@testing-library/react'
 import App from '../../src/App'
 
 describe('App routing', () => {
-  it('renders redeem page at /', async () => {
-    window.history.pushState({}, '', '/')
+  it('renders redeem page at /coupon/', async () => {
+    window.history.pushState({}, '', '/coupon/')
     render(<App />)
-    expect(await screen.findByText("Enter your details")).toBeInTheDocument()
+    expect(await screen.findByPlaceholderText('you@example.com')).toBeInTheDocument()
   })
-  it('renders help page at /help', async () => {
-    window.history.pushState({}, '', '/help')
+  it('renders help page at /coupon/help', async () => {
+    window.history.pushState({}, '', '/coupon/help')
     render(<App />)
-    expect(await screen.findByText('Help & FAQ')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Help' })).toBeInTheDocument()
   })
 })

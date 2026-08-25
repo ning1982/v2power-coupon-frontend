@@ -8,6 +8,10 @@ export type CaptchaConfig = {
 };
 
 export async function getCaptchaConfig(): Promise<CaptchaConfig> {
+  // 本地开发 mock：不连内网后端，避免代理打到 192.168.33.100 ETIMEDOUT 卡死加载条
+  if (import.meta.env.DEV && import.meta.env.VITE_MOCK === "1") {
+    return { captcha_type: "none", site_key: "", enabled: false };
+  }
   const res = await fetch("/coupon_api/captcha/config", { headers: { Accept: "application/json" } });
   const text = await res.text();
   try {

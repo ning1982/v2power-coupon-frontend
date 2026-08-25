@@ -3,9 +3,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { redeemSchema, type RedeemForm } from "../lib/validation";
-import { redeem } from "../api/coupon";
+import { redeem, normalizeToken } from "../api/coupon";
 import { mapApiError, maskEmail } from "../lib/errorMap";
-import { saveDraft, loadDraft, clearDraft } from "../lib/storage";
+import { parseAmount, formatAmount } from "../lib/amount";
 import Turnstile from "../components/Turnstile";
 
 const WHATSAPP = import.meta.env.VITE_WHATSAPP || "https://wa.me/447000000000";
@@ -13,31 +13,29 @@ const WHATSAPP = import.meta.env.VITE_WHATSAPP || "https://wa.me/447000000000";
 export default function RedeemPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const [globalError, setGlobalError] = useState<{ code: string; text: string } | null>(null);
+  const voucherToken = normalizeToken(params.get("t") || params.get("token") || "");
+  const amount = parseAmount(params.get("amt") || params.get("amount"));
+  const hasToken = voucherToken.length > 0;
+
   const [submitting, setSubmitting] = useState(false);
+  const [shaking, setShaking] = useState(false);
+  const [globalError, setGlobalError] = useState<{ code: string; text: string } | null>(null);
   const captchaRef = useRef<string>("");
 
   const form = useForm<RedeemForm>({
     resolver: zodResolver(redeemSchema),
-    defaultValues: { email: "", token: params.get("t") || params.get("token") || "", captcha_token: "", consent: false },
+    defaultValues: { email: "", token: voucherToken, captcha_token: "", consent: false },
     mode: "onBlur",
   });
 
+  // consent 校验失败 → 触发 shake（onAnimationEnd 自动归位，不用 setTimeout）
+  const consentError = !!form.formState.errors.consent;
   useEffect(() => {
-    const draft = loadDraft<RedeemForm>();
-    if (draft) {
-      if (!params.get("t") && !params.get("token")) form.reset(draft);
-      else form.reset({ ...draft, token: params.get("t") || params.get("token") || draft.token });
-    }
-  }, []);
-
-  const values = form.watch();
-  useEffect(() => {
-    const id = setTimeout(() => saveDraft(values as unknown as Record<string, unknown>), 500);
-    return () => clearTimeout(id);
-  }, [values]);
+    if (consentError) setShaking(true);
+  }, [consentError]);
 
   const onSubmit = async (data: RedeemForm) => {
+    if (submitting) return; // 防重并发锁（弱网狂点打爆后端）
     setGlobalError(null);
     setSubmitting(true);
     const payload = {
@@ -49,100 +47,157 @@ export default function RedeemPage() {
     try {
       const res = await redeem(payload);
       if (res.code === 0) {
-        clearDraft();
-        navigate("/success", { replace: true, state: { email: data.email, masked: res.data?.email || maskEmail(data.email) } });
+        // 防御性掩码：无论后端返回什么都再掩一次，杜绝完整邮箱上屏
+        navigate("/success", {
+          replace: true,
+          state: { email: data.email, masked: maskEmail(res.data?.email ?? data.email) },
+        });
       } else {
-        const mapped = mapApiError(res.msg || "");
-        setGlobalError({ code: mapped.code, text: mapped.text });
+        const m = mapApiError(res.msg || "");
+        setGlobalError({ code: m.code, text: m.text });
       }
     } catch (e: unknown) {
       if (e instanceof DOMException && e.name === "AbortError") {
-        setGlobalError({ code: "E504", text: "Request timed out, but redemption may have succeeded -please check your inbox (including spam) first. If not received within 10 minutes, try again." });
+        setGlobalError({ code: "E504", text: "Request timed out, but redemption may have succeeded — please check your inbox (including spam) first. If not received within 10 minutes, try again." });
       } else {
-        const msg = e instanceof Error ? e.message : "Network error";
-        setGlobalError({ code: "E500", text: msg });
+        setGlobalError({ code: "E500", text: e instanceof Error ? e.message : "Network error. Please try again." });
       }
     } finally {
       setSubmitting(false);
     }
   };
 
-  const tokenError = form.formState.errors.token?.message;
   const emailError = form.formState.errors.email?.message as string | undefined;
-  const consentError = form.formState.errors.consent?.message;
+  const tokenError = form.formState.errors.token?.message as string | undefined;
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="bg-white border-b sticky top-0 z-20">
-        <div className="max-w-[640px] mx-auto px-4 h-[52px] flex items-center justify-between">
+      <header className="sticky top-0 z-20 bg-surface-lowest/80 backdrop-blur border-b border-outline-variant">
+        <div className="max-w-[420px] mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="h-7 w-7 rounded-lg bg-[#071E33] flex items-center justify-center text-white font-bold text-[12px] tracking-widest">V2P</div>
-            <span className="display font-bold text-[15px] text-[#071E33]">V2Power</span>
-            <span className="hidden sm:inline text-xs text-slate-400 border-l pl-2.5 ml-1">Voucher Redemption</span>
+            <div className="h-8 w-8 rounded-[8px] bg-primary text-on-primary grid place-items-center text-xs font-bold">V2</div>
+            <span className="font-semibold text-on-surface">V2Power</span>
           </div>
-          <Link to="/help" className="text-sm font-medium text-slate-600 hover:text-[#071E33]">Help</Link>
+          <Link to="/help" className="text-sm font-medium text-primary">Help</Link>
         </div>
       </header>
 
-      <div className="flex-1 py-8 md:py-10 px-4">
-        <div className="max-w-[520px] mx-auto">
-          <div className="rounded-[20px] bg-[#071E33] text-white p-5 md:p-6 flex gap-4 items-center overflow-hidden relative">
-            <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[#00E5CC] blur-[50px] opacity-15"/>
-            <div className="h-12 w-12 rounded-xl bg-white/10 border border-white/15 grid place-items-center flex-shrink-0">
-              <span className="text-lg">#</span>
-            </div>
-            <div className="min-w-0">
-              <div className="text-[11px] tracking-[0.16em] text-[#00E5CC] font-semibold">V2POWER - CHARGING VOUCHER</div>
-              <h1 className="display text-[20px] font-bold leading-none mt-1">Redeem Your Voucher</h1>
-              <p className="text-xs text-white/65 mt-1.5 leading-relaxed">Scan the QR on your card or enter the code below. One Token, one redemption -code sent by email.</p>
-            </div>
-          </div>
+      <main className="flex-1 px-4 pb-6">
+        <div className="max-w-[420px] mx-auto pt-2">
+          {/* 价值主张：面额优先（?amt=），无面额走降级文案 */}
+          <h1 className="text-[1.5rem] leading-8 text-on-surface">
+            Claim your{" "}
+            <span className="text-primary font-semibold">
+              {amount !== null ? `${formatAmount(amount)} charging` : "exclusive charging"}
+            </span>{" "}
+            credit
+          </h1>
+          <p className="text-sm text-on-surface-variant mt-1 text-pretty">
+            Enter your email to receive the discount code printed on your card.
+          </p>
 
-          <div className="mt-4 bg-white rounded-[20px] shadow-[0_8px_32px_rgba(7,30,51,0.08)] border border-slate-200/70 p-5 md:p-6">
-            <div className="flex items-center justify-between">
-              <h2 className="display font-bold text-[15px]">Enter your details</h2>
-              <span className="text-[11px] font-semibold tracking-widest text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1 flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500"/>SECURE</span>
-            </div>
-            <p className="text-xs text-slate-500 mt-1">Tip: Paste your code or scan the QR -it fills automatically</p>
+          <div className="mt-3 bg-surface-lowest rounded-[16px] shadow-m3-1 p-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
+              {/* voucher chip（只读，token 降权）或手动输入 */}
+              {hasToken ? (
+                <span className="inline-flex items-center gap-2 h-10 px-3 rounded-[8px] bg-surface-high text-xs text-on-surface-variant">
+                  <span className="text-primary text-[13px]" aria-hidden>&#10003;</span>
+                  <span>Voucher</span>
+                  <span className="font-semibold tracking-[0.06em] text-on-surface whitespace-nowrap overflow-hidden text-ellipsis">{voucherToken}</span>
+                </span>
+              ) : (
+                <div>
+                  <label htmlFor="token" className="text-xs font-medium text-on-surface-variant">Voucher code</label>
+                  <input
+                    id="token"
+                    className="mt-1 w-full h-12 px-3 rounded-[8px] border border-outline bg-transparent text-sm outline-none focus:border-primary focus:border-2"
+                    placeholder="e.g. V2P-KHWMYLOQ"
+                    aria-invalid={!!tokenError}
+                    {...form.register("token")}
+                  />
+                  {tokenError && <p className="text-xs text-error mt-1">{tokenError}</p>}
+                </div>
+              )}
+
+              {/* email */}
+              <div className={hasToken ? "mt-4" : "mt-4"}>
+                <input
+                  id="email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  className={`w-full h-14 px-4 rounded-[4px] border bg-transparent text-base outline-none ${emailError ? "border-error border-2" : "border-outline focus:border-primary focus:border-2"}`}
+                  placeholder="you@example.com"
+                  aria-invalid={!!emailError}
+                  aria-describedby={emailError ? "email-err" : "email-help"}
+                  {...form.register("email")}
+                />
+                <p id={emailError ? "email-err" : "email-help"} className={`text-xs mt-1 ${emailError ? "text-error" : "text-on-surface-variant"}`}>
+                  {emailError || "Double-check it — the code goes here."}
+                </p>
+              </div>
+
+              {/* consent */}
+              <div
+                className={`flex gap-3 mt-4 items-start rounded-[8px] p-2 -mx-2 transition-colors ${shaking ? "animate-shake" : ""} ${consentError ? "bg-error/10" : ""}`}
+                onAnimationEnd={() => setShaking(false)}
+              >
+                <input
+                  id="consent"
+                  type="checkbox"
+                  className="w-5 h-5 mt-0.5 accent-primary"
+                  aria-invalid={!!consentError}
+                  {...form.register("consent")}
+                />
+                <label htmlFor="consent" className="text-sm text-on-surface text-pretty cursor-pointer">
+                  I agree to the{" "}
+                  <a href="https://www.v2power.io/v2power/privacy/" target="_blank" rel="noopener noreferrer" referrerPolicy="strict-origin-when-cross-origin" className="text-primary underline underline-offset-2">Privacy Policy</a>. We only use your email to send this voucher and stop the same card being claimed twice.
+                </label>
+              </div>
+              {consentError && <p className="text-xs text-error -mt-1 ml-2">Please tick the box so we can send your voucher code.</p>}
+
+              <Turnstile
+                onVerify={(t) => { captchaRef.current = t; form.setValue("captcha_token", t); }}
+                onExpire={() => { captchaRef.current = ""; form.setValue("captcha_token", ""); }}
+              />
+
+              {/* CTA：永不 disabled（除提交中），点击即校验，软键盘 Go 键可触发 */}
+              <button
+                type="submit"
+                disabled={submitting}
+                aria-busy={submitting}
+                className="w-full h-14 mt-4 rounded-full bg-primary text-on-primary font-medium text-sm disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {submitting ? (
+                  <><span className="h-4 w-4 border-2 border-on-primary/30 border-t-on-primary rounded-full animate-spin" /> Sending&#8230;</>
+                ) : (
+                  <>Send my voucher <span aria-hidden>&rarr;</span></>
+                )}
+              </button>
+            </form>
+
+            {/* 信任微标 */}
+            <p className="text-xs text-center text-on-surface-variant mt-2">&#128274; Instant code delivery &middot; No marketing spam</p>
+            <p className="text-[11px] text-center text-on-surface-variant mt-1">Sent by email only &mdash; never shown on this page.</p>
 
             {globalError && (
-              <div className="mt-4 bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 text-sm flex gap-2">
-                <span className="h-5 w-5 rounded-full bg-red-600 text-white grid place-items-center text-xs flex-shrink-0 mt-0.5">!</span>
-                <div><div className="font-medium text-xs leading-none">{globalError.text}</div><div className="text-[11px] opacity-60 mt-1">Code: {globalError.code}</div></div>
+              <div role="alert" className="mt-3 bg-error-container text-on-error-container rounded-[8px] p-3 text-sm">
+                <div className="font-medium">{globalError.text}</div>
+                <div className="text-xs opacity-70 mt-1">Code: {globalError.code}</div>
               </div>
             )}
-
-            <form onSubmit={form.handleSubmit(onSubmit)} className="mt-4 space-y-4" noValidate>
-              <div>
-                <label className="text-xs font-semibold tracking-widest text-slate-600">EMAIL *</label>
-                <input className="mt-1.5 w-full border border-slate-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#00E5CC]/30 focus:border-[#00E5CC] bg-[#F8FAFC]" placeholder="you@example.com" {...form.register("email")} />
-                {emailError && <p className="text-xs text-red-600 mt-1.5">{emailError}</p>}
-              </div>
-              <div>
-                <div className="flex items-center justify-between"><label className="text-xs font-semibold tracking-widest text-slate-600">TOKEN *</label><span className="text-[11px] mono text-slate-400">{(form.watch("token")||"").replace(/[^A-Z0-9]/gi,"").length}/64</span></div>
-                <input className="mt-1.5 w-full border border-slate-200 rounded-xl px-3 py-3 mono text-sm tracking-[0.14em] focus:outline-none focus:ring-2 focus:ring-[#00E5CC]/30 focus:border-[#00E5CC] bg-[#F8FAFC]" placeholder="e.g. V2P-KHWMYLOQ" {...form.register("token")} />
-                {tokenError ? <p className="text-xs text-red-600 mt-1.5">{tokenError}</p> : <p className="text-xs text-slate-500 mt-1.5">Tip: Paste your code or scan the QR -it fills automatically</p>}
-              </div>
-
-              <Turnstile onVerify={(t) => { captchaRef.current = t; form.setValue("captcha_token", t); }} onExpire={() => { captchaRef.current = ""; form.setValue("captcha_token", ""); }} />
-
-              <label className="flex items-start gap-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl p-3 cursor-pointer">
-                <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#071E33]" {...form.register("consent")} />
-                <span className="text-slate-700">I agree to the <a href="https://www.v2power.io/v2power/privacy/" target="_blank" rel="noreferrer" className="underline decoration-[#00E5CC] underline-offset-2">Privacy Policy</a> * <span className="text-slate-500 text-xs">-hashed email/IP retained 2 years per GDPR.</span></span>
-              </label>
-              {consentError && <p className="text-xs text-red-600 -mt-2">{consentError}</p>}
-
-              <button type="submit" disabled={submitting} className="w-full rounded-xl py-3.5 font-semibold text-white bg-[#071E33] hover:bg-[#0c2540] disabled:opacity-50 transition flex items-center justify-center gap-2">
-                {submitting ? (<><span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/> Submitting...</>) : (<>Send My Voucher <span className="h-6 w-6 rounded-full bg-white/15 grid place-items-center text-sm">-</span></>)}
-              </button>
-              <p className="text-[11px] text-center text-slate-400">Voucher code will be sent by email only, not shown on site.</p>
-            </form>
           </div>
 
-          <p className="text-xs text-center text-slate-400 mt-4">Need help? <Link to="/help" className="underline decoration-dotted hover:text-slate-600">Visit Help</Link> · <a href={WHATSAPP} target="_blank" rel="noreferrer" className="underline decoration-dotted hover:text-slate-600">Chat on WhatsApp</a> · <a href="mailto:support@v2power.com" className="underline decoration-dotted">support@v2power.com</a></p>
+          {/* footer：收敛为单一 WhatsApp 主渠道 */}
+          <p className="text-sm text-center text-on-surface-variant mt-4">
+            Need help?{" "}
+            <a href={WHATSAPP} target="_blank" rel="noopener noreferrer" referrerPolicy="strict-origin-when-cross-origin" className="text-primary underline underline-offset-2">Chat on WhatsApp</a>
+          </p>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
-
