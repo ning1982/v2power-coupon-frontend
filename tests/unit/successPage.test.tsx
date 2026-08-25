@@ -18,7 +18,6 @@ describe('SuccessPage', () => {
     expect(screen.getByText(/Voucher sent/)).toBeInTheDocument()
     expect(screen.getByText('z***g@v2power.io')).toBeInTheDocument()
     expect(screen.getByText(/Arrives in ~30 seconds/)).toBeInTheDocument()
-    expect(screen.getByText('Open email app')).toBeInTheDocument()
     expect(screen.getByText('WhatsApp support')).toBeInTheDocument()
   })
   it('masks email automatically if masked not provided', () => {

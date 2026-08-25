@@ -60,8 +60,14 @@ describe('RedeemPage English', () => {
     await user.type(screen.getByPlaceholderText(EMAIL_PH), 'zhilin.zhang@v2power.io')
     await user.click(screen.getByLabelText(/I agree to the Privacy Policy/))
     await user.click(screen.getByRole('button', { name: /Send my voucher/ }))
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce())
-    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string)
+    // .env 关闭 VITE_MOCK 后，captcha/config 也会走 fetch，因此断言"redeem 被调用过一次"
+    // 而非"fetch 总共只调一次"
+    await waitFor(() => {
+      const redeemCalls = fetchMock.mock.calls.filter((c) => String(c[0]).includes('/coupon/redeem'))
+      expect(redeemCalls).toHaveLength(1)
+    })
+    const redeemCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('/coupon/redeem'))!
+    const body = JSON.parse((redeemCall[1] as RequestInit).body as string)
     expect(body.email).toBe('zhilin.zhang@v2power.io')
     expect(body.confirmed_email).toBe('zhilin.zhang@v2power.io')
     expect(body.token).toBe('V2P-KHWMYLOQ')

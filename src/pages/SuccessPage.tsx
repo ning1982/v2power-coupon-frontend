@@ -52,9 +52,8 @@ export default function SuccessPage() {
               </ul>
             </div>
 
-            {/* 主次分明：Open email app = Filled，WhatsApp = Outlined */}
-            <a href="mailto:" className="block w-full h-14 mt-4 rounded-full bg-primary text-on-primary font-medium text-sm leading-[56px]">Open email app</a>
-            <a href={WHATSAPP} target="_blank" rel="noopener noreferrer" referrerPolicy="strict-origin-when-cross-origin" className="block w-full h-12 mt-2 rounded-full border border-outline text-primary font-medium text-sm leading-[48px]">WhatsApp support</a>
+            {/* 主按钮：WhatsApp（去掉 mailto: 的 "Open email app"——它在手机上打开的是「写新邮件」而非收件箱，行为与文案不符） */}
+            <a href={WHATSAPP} target="_blank" rel="noopener noreferrer" referrerPolicy="strict-origin-when-cross-origin" className="block w-full h-14 mt-4 rounded-full bg-primary text-on-primary font-medium text-sm leading-[56px]">WhatsApp support</a>
 
             <p className="text-xs text-on-surface-variant mt-3">For security, the code is never shown here.</p>
           </div>

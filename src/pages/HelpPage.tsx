@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 
 const WHATSAPP = import.meta.env.VITE_WHATSAPP || "https://wa.me/447000000000";
-const PRIVACY = "https://www.v2power.io/v2power/privacy/";
 
 export default function HelpPage() {
   return (
@@ -54,7 +53,7 @@ export default function HelpPage() {
               <h2 className="font-medium">Privacy</h2>
               <p className="text-sm text-on-primary/80 mt-1 leading-relaxed">
                 We only use your email to send the voucher. Data is kept for 2 years as required by UK GDPR.{" "}
-                <a href={PRIVACY} target="_blank" rel="noopener noreferrer" referrerPolicy="strict-origin-when-cross-origin" className="underline underline-offset-2 text-on-primary">Read the full policy</a>
+                <Link to="/privacy" className="underline underline-offset-2 text-on-primary">Read the full policy</Link>
               </p>
             </section>
           </div>

@@ -154,7 +154,7 @@ export default function RedeemPage() {
                 />
                 <label htmlFor="consent" className="text-sm text-on-surface text-pretty cursor-pointer">
                   I agree to the{" "}
-                  <a href="https://www.v2power.io/v2power/privacy/" target="_blank" rel="noopener noreferrer" referrerPolicy="strict-origin-when-cross-origin" className="text-primary underline underline-offset-2">Privacy Policy</a>. We only use your email to send this voucher and stop the same card being claimed twice.
+                  <Link to="/privacy" className="text-primary underline underline-offset-2">Privacy Policy</Link>. We only use your email to send this voucher and stop the same card being claimed twice.
                 </label>
               </div>
               {consentError && <p className="text-xs text-error -mt-1 ml-2">Please tick the box so we can send your voucher code.</p>}

@@ -52,6 +52,7 @@ export default function BatchDetailView() {
         <h1 className="text-xl font-semibold text-on-surface">{detail.batch_name}</h1>
         <span className="font-mono text-xs text-on-surface-variant">{detail.batch_id.slice(0, 10)}…</span>
         <span className="flex-1" />
+        <button onClick={() => nav(`/admin/print/${id}`)} className="h-10 px-5 rounded-full bg-primary text-on-primary text-sm font-medium">Print cards</button>
         <button className="h-10 px-5 rounded-full bg-secondary-container text-on-secondary-container text-sm font-medium">Download QR ZIP</button>
       </div>
 
