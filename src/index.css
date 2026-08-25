@@ -1,0 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap');
+@import "tailwindcss";
+
+:root{
+  --v2-navy:#071E33;
+  --v2-navy-2:#0A2F4F;
+  --v2-teal:#00E5CC;
+  --v2-teal-dim:#00C2A8;
+  --v2-amber:#FFD23F;
+  --v2-ink:#0F172A;
+  --v2-cloud:#F1F5F9;
+}
+html{scroll-behavior:smooth}
+body{
+  font-family:"Inter",system-ui,-apple-system,sans-serif;
+  background:
+    radial-gradient(900px 500px at 15% -10%, rgba(0,229,204,0.18), transparent 60%),
+    radial-gradient(800px 600px at 95% 0%, rgba(255,210,63,0.12), transparent 60%),
+    linear-gradient(180deg, #F8FAFC 0%, #EEF2F7 100%);
+  color:var(--v2-ink);
+  -webkit-font-smoothing:antialiased;
+}
+.display{font-family:"Space Grotesk",sans-serif; letter-spacing:-0.02em}
+.mono{font-family:"JetBrains Mono",monospace}
+.grid-pattern{
+  background-image:
+    linear-gradient(rgba(7,30,51,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(7,30,51,0.04) 1px, transparent 1px);
+  background-size:32px 32px;
+}
+.pulse{animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+.shimmer{position:relative; overflow:hidden}
+.shimmer::after{
+  content:""; position:absolute; inset:0;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent);
+  transform:translateX(-100%); animation:shimmer 2.2s infinite;
+}
+@keyframes shimmer{100%{transform:translateX(100%)}}
