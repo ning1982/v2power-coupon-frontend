@@ -1,41 +1,85 @@
-﻿# V2Power Coupon Frontend — Voucher Redeem Website
+# V2Power Coupon -- Voucher Redeem
 
-Vite + React + TS + Tailwind + React Router + Hook Form + Zod 静态 SPA，部署到公司 Linux Nginx（dist/）。
+> Scan QR -> email + token -> verify -> voucher by email. SPA at coupon.v2power.com/coupon/.
 
-## 目录结构（符合开发规范）
+[![Vite](https://img.shields.io/badge/Vite-8.x-646CFF?logo=vite)](https://vitejs.dev)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript)](https://www.typescriptlang.org)
+[![Tailwind](https://img.shields.io/badge/Tailwind-4-06B6D4?logo=tailwindcss)](https://tailwindcss.com)
+
+English-only UI. Flow: Redeem -> Success / Help. API prefix /coupon_api (dev proxy -> 192.168.33.100:8088, prod same-origin Nginx).
+
+## Features
+- QR auto-fill: ?t=V2P-XXXX pre-fills Token (trim / uppercase / paste-normalize)
+- Single email + GDPR consent (Zod + Hook Form, blocks submit until checked)
+- Bot protection: reCAPTCHA v2 prod / none locally -- site key 6Ldb3ZctAAAAAAgBlmOmyHyh2xXlI0__qdFUuI_4
+- Privacy-safe: success uses history.state, never email in URL
+- Resilient: 15s timeout with check-inbox-first copy, draft cleared on success/close
+- Support: WhatsApp wa.me on Success & Help
+- Mock: VITE_MOCK=1 dev only (fakes V2PTEST*)
+
+## Stack
+| Layer | Choice |
+|---|---|
+| Build | Vite 8, base /coupon/ |
+| UI | React 19 + Router 7 + Tailwind 4 |
+| Form | React Hook Form + Zod |
+| Test | Vitest 3 + Testing Library + jsdom |
+| Deploy | Static dist/ via Nginx try_files |
+
+## Structure
 `
 v2power-coupon-frontend/
-  docs/
-    specs/  PRD v1.2 + 交互逻辑 IA v1.2（已合入老板9项反馈）
-    api/    v2power-coupon-API_SIMPLE_v1/v2.md（Base http://192.168.33.100:8088）
-  specs/    兼容旧路径，同 docs/specs
-  src/
-    api/coupon.ts        兑换接口（POST /api/coupon/redeem，代理到 8088）
-    lib/validation.ts    Zod 双邮箱+GDPR+Token 校验
-    lib/errorMap.ts      API code 0/1 → 中文 E101/E102 等
-    lib/storage.ts       sessionStorage 草稿 + beforeunload 销毁
-    components/Turnstile.tsx  Cloudflare Turnstile 无感+降级，dev传 none
-    pages/RedeemPage.tsx P0+P1+P3 统一（?t= 预填、15s超时先查邮箱）
-    pages/SuccessPage.tsx P2 history.state 传邮箱（不放URL）+ WhatsApp
-    pages/HelpPage.tsx   P4 FAQ + WhatsApp
-    App.tsx  Router / /success /help
-  public/
-  vite.config.ts  proxy /api → 192.168.33.100:8088
-  .env.example    VITE_CAPTCHA=none 本地跳过验证
+  docs/specs/  PRD v1.2 + IA v1.2 (9 boss items merged)
+  docs/api/    v2power-coupon-API_SIMPLE_v8.md
+  src/api/     coupon.ts (redeem), captcha.ts
+  src/lib/     validation.ts, errorMap.ts, storage.ts
+  src/pages/   RedeemPage.tsx, SuccessPage.tsx, HelpPage.tsx
+  vite.config.ts  proxy /coupon_api -> 192.168.33.100:8088
 `
 
-## 本地开发（Win）
+## Quick Start (Windows)
 `ash
 npm install
-npm run dev   # http://localhost:5173/?t=V2P-XXXX 自动预填
+npm run dev      # http://localhost:5173/coupon/?t=V2P-TEST1234
+npm run build    # -> dist/ ~341KB JS, dist.zip ~115KB
+npm test
 `
 
-## 构建部署（Linux Nginx）
-`ash
-npm run build # → dist/
-# scp -r dist/* user@192.168.33.122:/var/www/coupon/
-# Nginx: try_files \ /index.html; location /api/ { proxy_pass http://127.0.0.1:8088; }
-`
+## Env
+| Var | Example | Notes |
+|---|---|---|
+| VITE_CAPTCHA | none (dev) / recaptcha (prod) | prod needs Google allowlist |
+| VITE_TURNSTILE_SITEKEY | 6Ldb3ZctAAAAAAgBlmOmyHyh2xXlI0__qdFUuI_4 | site key |
+| VITE_WHATSAPP | https://wa.me/447000000000 | replace with real number |
+| VITE_API_TARGET | http://192.168.33.100:8088 | dev proxy only |
+| VITE_MOCK | 1 | dev only |
 
-## 9项老板反馈已合入
-- 双邮箱确认、GDPR必勾、Turnstile无感+降级、amount占位、邮件面额/有效期、P2/P4 WhatsApp、history.state隐私、超时幂等文案、草稿销毁
+See .env.example. .env.production ships with recaptcha.
+
+## API v8
+Base http://192.168.33.100:8088 prefix /coupon_api
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | /coupon_api/admin/import | Import Excel -> batch_id + tokens |
+| POST | /coupon_api/coupon/redeem | {email, confirmed_email, token, captcha_token} |
+| GET | /coupon_api/captcha/config | {site_key} |
+| GET | /coupon_api/captcha/test-token | dev test token |
+| GET | /coupon_api/admin/qr?token=... | QR PNG |
+| GET | /coupon_api/admin/batch/{id}/qrs | ZIP |
+
+Contract: docs/api/v2power-coupon-API_SIMPLE_v8.md
+
+## Deploy (Linux + Nginx)
+root /var/www/coupon;
+location /coupon/ { try_files $uri $uri/ /coupon/index.html; }
+location /coupon_api/ { proxy_pass http://127.0.0.1:8088; }
+
+Build: npm run build -> unzip dist.zip -d /var/www/coupon/
+QR for print: https://coupon.v2power.com/coupon/?t=V2P-XXXX
+
+## Specs
+- PRD: docs/specs/2026-08-25-v2power-voucher-redeem-website-prd.md
+- IA: docs/specs/2026-08-25-v2power-voucher-interaction-logic.md
+- API v8: docs/api/v2power-coupon-API_SIMPLE_v8.md
