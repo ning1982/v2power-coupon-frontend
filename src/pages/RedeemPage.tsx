@@ -8,7 +8,7 @@ import { mapApiError, maskEmail } from "../lib/errorMap";
 import { parseAmount, formatAmount } from "../lib/amount";
 import Turnstile from "../components/Turnstile";
 
-const WHATSAPP = import.meta.env.VITE_WHATSAPP || "https://wa.me/447000000000";
+const WHATSAPP = import.meta.env.VITE_WHATSAPP || "https://wa.me/447868288666";
 
 export default function RedeemPage() {
   const [params] = useSearchParams();
@@ -24,9 +24,17 @@ export default function RedeemPage() {
 
   const form = useForm<RedeemForm>({
     resolver: zodResolver(redeemSchema),
-    defaultValues: { email: "", token: voucherToken, captcha_token: "", consent: false },
+    defaultValues: { email: "", confirmedEmail: "", token: voucherToken, captcha_token: "", consent: false },
     mode: "onBlur",
   });
+
+  // Re-validate confirm field when email changes (mismatch must update live)
+  const emailValue = form.watch("email");
+  useEffect(() => {
+    if (form.formState.touchedFields.confirmedEmail) {
+      form.trigger("confirmedEmail");
+    }
+  }, [emailValue, form]);
 
   // consent 校验失败 → 触发 shake（onAnimationEnd 自动归位，不用 setTimeout）
   const consentError = !!form.formState.errors.consent;
@@ -35,19 +43,18 @@ export default function RedeemPage() {
   }, [consentError]);
 
   const onSubmit = async (data: RedeemForm) => {
-    if (submitting) return; // 防重并发锁（弱网狂点打爆后端）
+    if (submitting) return;
     setGlobalError(null);
     setSubmitting(true);
     const payload = {
       email: data.email.trim().toLowerCase(),
-      confirmed_email: data.email.trim().toLowerCase(),
+      confirmed_email: data.confirmedEmail.trim().toLowerCase(),
       token: data.token,
       captcha_token: captchaRef.current || "",
     };
     try {
       const res = await redeem(payload);
       if (res.code === 0) {
-        // 防御性掩码：无论后端返回什么都再掩一次，杜绝完整邮箱上屏
         navigate("/success", {
           replace: true,
           state: { email: data.email, masked: maskEmail(res.data?.email ?? data.email) },
@@ -68,6 +75,7 @@ export default function RedeemPage() {
   };
 
   const emailError = form.formState.errors.email?.message as string | undefined;
+  const confirmedEmailError = form.formState.errors.confirmedEmail?.message as string | undefined;
   const tokenError = form.formState.errors.token?.message as string | undefined;
 
   return (
@@ -84,7 +92,6 @@ export default function RedeemPage() {
 
       <main className="flex-1 px-4 pb-6">
         <div className="max-w-[420px] mx-auto pt-2">
-          {/* 价值主张：面额优先（?amt=），无面额走降级文案 */}
           <h1 className="text-[1.5rem] leading-8 text-on-surface">
             Claim your{" "}
             <span className="text-primary font-semibold">
@@ -98,12 +105,11 @@ export default function RedeemPage() {
 
           <div className="mt-3 bg-surface-lowest rounded-[16px] shadow-m3-1 p-4">
             <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
-              {/* voucher chip（只读，token 降权）或手动输入 */}
               {hasToken ? (
                 <span className="inline-flex items-center gap-2 h-10 px-3 rounded-[8px] bg-surface-high text-xs text-on-surface-variant">
                   <span className="text-primary text-[13px]" aria-hidden>&#10003;</span>
                   <span>Voucher</span>
-                  <span className="font-semibold tracking-[0.06em] text-on-surface whitespace-nowrap overflow-hidden text-ellipsis">{voucherToken}</span>
+                  <span className="font-mono font-medium text-on-surface">{voucherToken}</span>
                 </span>
               ) : (
                 <div>
@@ -119,8 +125,8 @@ export default function RedeemPage() {
                 </div>
               )}
 
-              {/* email */}
-              <div className={hasToken ? "mt-4" : "mt-4"}>
+              <div className="mt-4">
+                <label htmlFor="email" className="text-xs font-medium text-on-surface-variant">Email address *</label>
                 <input
                   id="email"
                   type="email"
@@ -129,7 +135,7 @@ export default function RedeemPage() {
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}
-                  className={`w-full h-14 px-4 rounded-[4px] border bg-transparent text-base outline-none ${emailError ? "border-error border-2" : "border-outline focus:border-primary focus:border-2"}`}
+                  className={`mt-1 w-full h-14 px-4 rounded-[4px] border bg-transparent text-base outline-none ${emailError ? "border-error border-2" : "border-outline focus:border-primary focus:border-2"}`}
                   placeholder="you@example.com"
                   aria-invalid={!!emailError}
                   aria-describedby={emailError ? "email-err" : "email-help"}
@@ -140,7 +146,27 @@ export default function RedeemPage() {
                 </p>
               </div>
 
-              {/* consent */}
+              <div className="mt-3">
+                <label htmlFor="confirmedEmail" className="text-xs font-medium text-on-surface-variant">Confirm email address *</label>
+                <input
+                  id="confirmedEmail"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  className={`mt-1 w-full h-14 px-4 rounded-[4px] border bg-transparent text-base outline-none ${confirmedEmailError ? "border-error border-2" : "border-outline focus:border-primary focus:border-2"}`}
+                  placeholder="Re-enter your email"
+                  aria-invalid={!!confirmedEmailError}
+                  aria-describedby={confirmedEmailError ? "confirm-err" : "confirm-help"}
+                  {...form.register("confirmedEmail")}
+                />
+                <p id={confirmedEmailError ? "confirm-err" : "confirm-help"} className={`text-xs mt-1 ${confirmedEmailError ? "text-error" : "text-on-surface-variant"}`}>
+                  {confirmedEmailError || "Must match the email above."}
+                </p>
+              </div>
+
               <div
                 className={`flex gap-3 mt-4 items-start rounded-[8px] p-2 -mx-2 transition-colors ${shaking ? "animate-shake" : ""} ${consentError ? "bg-error/10" : ""}`}
                 onAnimationEnd={() => setShaking(false)}
@@ -164,7 +190,6 @@ export default function RedeemPage() {
                 onExpire={() => { captchaRef.current = ""; form.setValue("captcha_token", ""); }}
               />
 
-              {/* CTA：永不 disabled（除提交中），点击即校验，软键盘 Go 键可触发 */}
               <button
                 type="submit"
                 disabled={submitting}
@@ -179,7 +204,6 @@ export default function RedeemPage() {
               </button>
             </form>
 
-            {/* 信任微标 */}
             <p className="text-xs text-center text-on-surface-variant mt-2">&#128274; Instant code delivery &middot; No marketing spam</p>
             <p className="text-[11px] text-center text-on-surface-variant mt-1">Sent by email only &mdash; never shown on this page.</p>
 
@@ -191,7 +215,6 @@ export default function RedeemPage() {
             )}
           </div>
 
-          {/* footer：收敛为单一 WhatsApp 主渠道 */}
           <p className="text-sm text-center text-on-surface-variant mt-4">
             Need help?{" "}
             <a href={WHATSAPP} target="_blank" rel="noopener noreferrer" referrerPolicy="strict-origin-when-cross-origin" className="text-primary underline underline-offset-2">Chat on WhatsApp</a>

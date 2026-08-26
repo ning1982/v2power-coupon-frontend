@@ -71,18 +71,25 @@ export default function Turnstile({ onVerify, onExpire }: Props) {
             "expired-callback": () => { setVerified(false); onVerify(""); onExpire?.(); },
             "error-callback": () => setVerified(false),
           });
-        } catch {}
+        } catch (e) { console.error("[recaptcha] grecaptcha.render throw", e); }
       };
-      if (window.grecaptcha && (window.grecaptcha as any).render) render();
+      const doRender = () => {
+        const g: any = window.grecaptcha;
+        if (!g) return;
+        const call = () => render();
+        try { if (g.ready) g.ready(call); else call(); } catch (e) { console.error("[recaptcha] render failed", e); try { call(); } catch (e2) { console.error(e2); } }
+      };
+      if (window.grecaptcha && (window.grecaptcha as any).render) doRender();
       else {
         const existing = document.querySelector('script[data-recaptcha]') as HTMLScriptElement | null;
         if (!existing) {
           const s = document.createElement("script");
           s.src = "https://www.google.com/recaptcha/api.js?render=explicit";
           s.async = true; s.defer = true; (s as any).dataset.recaptcha = "1";
-          s.onload = render;
+          s.onload = doRender;
+          s.onerror = () => setState(prev => ({ ...prev, error: "Failed to load reCAPTCHA script. Check network/VPN." }));
           document.head.appendChild(s);
-        } else existing.addEventListener("load", render, { once: true });
+        } else { existing.addEventListener("load", doRender, { once: true }); existing.addEventListener("error", () => setState(prev => ({ ...prev, error: "Failed to load reCAPTCHA script." })), { once: true }); if ((window as any).grecaptcha) doRender(); }
       }
       return () => { if (widgetId !== undefined && window.grecaptcha) try { window.grecaptcha.reset(widgetId); } catch {} };
     }

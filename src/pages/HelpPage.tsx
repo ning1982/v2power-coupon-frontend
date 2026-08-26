@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-const WHATSAPP = import.meta.env.VITE_WHATSAPP || "https://wa.me/447000000000";
+const WHATSAPP = import.meta.env.VITE_WHATSAPP || "https://wa.me/447868288666";
 
 export default function HelpPage() {
   return (

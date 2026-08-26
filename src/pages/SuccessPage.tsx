@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { maskEmail } from "../lib/errorMap";
 
-const WHATSAPP = import.meta.env.VITE_WHATSAPP || "https://wa.me/447000000000";
+const WHATSAPP = import.meta.env.VITE_WHATSAPP || "https://wa.me/447868288666";
 
 export default function SuccessPage() {
   const loc = useLocation() as { state?: { email?: string; masked?: string } };
