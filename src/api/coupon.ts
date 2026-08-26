@@ -11,7 +11,7 @@ export type RedeemResponse = {
   msg?: string;
   data?: { email_sent: boolean; email: string; message: string };
 };
-const REDEEM_TIMEOUT_MS = 15000;
+const REDEEM_TIMEOUT_MS = 30000;
 
 export async function redeem(payload: RedeemPayload): Promise<RedeemResponse> {
   const mockEnabled = import.meta.env.DEV && import.meta.env.VITE_MOCK === "1";
@@ -19,7 +19,7 @@ export async function redeem(payload: RedeemPayload): Promise<RedeemResponse> {
     const norm = payload.token.toUpperCase().replace(/[^A-Z0-9]/g, "");
     if (norm === "V2PTEST1234" || norm.startsWith("V2PTEST")) {
       await new Promise((r) => setTimeout(r, 600));
-      // mock 也返回脱敏邮箱，与生产后端行为一致（API v8: data.email 已脱敏）
+      // mock also returns masked email, consistent with production (API v8: data.email is masked)
       return { code: 0, data: { email_sent: true, email: maskEmail(payload.email), message: "mock success" } };
     }
   }
@@ -43,8 +43,8 @@ export async function redeem(payload: RedeemPayload): Promise<RedeemResponse> {
   }
 }
 
-// token 契约：保留连字符（印刷格式 V2P-XXXXXXXX），后端按原样匹配。
-// 注意：不做去连字符归一化，与后端契约一致。
+// token contract: keep hyphen (print format V2P-XXXXXXXX), backend matches exactly.
+// Note: do not strip hyphen, consistent with backend contract.
 export function normalizeToken(s: string): string {
   return s.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 64);
 }

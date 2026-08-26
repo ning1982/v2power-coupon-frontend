@@ -12,7 +12,7 @@ import PrintView from "./pages/admin/PrintView";
 
 export default function App() {
   return (
-    <BrowserRouter basename="/coupon">
+    <BrowserRouter basename="/Voucher">
       <Routes>
         <Route path="/" element={<RedeemPage />} />
         <Route path="/success" element={<SuccessPage />} />

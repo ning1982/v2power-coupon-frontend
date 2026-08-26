@@ -1,4 +1,4 @@
-﻿import React from "react"
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -10,6 +10,7 @@ function renderRedeem(initialUrl = '/') {
 }
 
 const EMAIL_PH = 'you@example.com'
+const CONFIRM_PH = 'Re-enter your email'
 const TOKEN_PH = 'e.g. V2P-KHWMYLOQ'
 
 describe('RedeemPage English', () => {
@@ -46,6 +47,7 @@ describe('RedeemPage English', () => {
     renderRedeem('/?t=V2P-KHWMYLOQ')
     const user = userEvent.setup()
     await user.type(screen.getByPlaceholderText(EMAIL_PH), 'zhilin.zhang@v2power.io')
+    await user.type(screen.getByPlaceholderText(CONFIRM_PH), 'zhilin.zhang@v2power.io')
     fireEvent.click(screen.getByRole('button', { name: /Send my voucher/ }))
     expect(await screen.findByText(/Please tick the box/)).toBeInTheDocument()
   })
@@ -58,10 +60,9 @@ describe('RedeemPage English', () => {
     renderRedeem('/?t=V2P-KHWMYLOQ')
     const user = userEvent.setup()
     await user.type(screen.getByPlaceholderText(EMAIL_PH), 'zhilin.zhang@v2power.io')
+    await user.type(screen.getByPlaceholderText(CONFIRM_PH), 'zhilin.zhang@v2power.io')
     await user.click(screen.getByLabelText(/I agree to the Privacy Policy/))
     await user.click(screen.getByRole('button', { name: /Send my voucher/ }))
-    // .env 关闭 VITE_MOCK 后，captcha/config 也会走 fetch，因此断言"redeem 被调用过一次"
-    // 而非"fetch 总共只调一次"
     await waitFor(() => {
       const redeemCalls = fetchMock.mock.calls.filter((c) => String(c[0]).includes('/coupon/redeem'))
       expect(redeemCalls).toHaveLength(1)
@@ -76,12 +77,13 @@ describe('RedeemPage English', () => {
 
   it('shows already redeemed error', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
-      ok: true, status: 200, text: () => Promise.resolve(JSON.stringify({ code: 102, msg: '该Token已被兑换' }))
+      ok: true, status: 200, text: () => Promise.resolve(JSON.stringify({ code: 102, msg: '��Token�ѱ��һ�' }))
     } as unknown as Response)
     vi.stubGlobal('fetch', fetchMock)
     renderRedeem('/?t=V2P-KHWMYLOQ')
     const user = userEvent.setup()
     await user.type(screen.getByPlaceholderText(EMAIL_PH), 'a@b.com')
+    await user.type(screen.getByPlaceholderText(CONFIRM_PH), 'a@b.com')
     await user.click(screen.getByLabelText(/I agree to the Privacy Policy/))
     await user.click(screen.getByRole('button', { name: /Send my voucher/ }))
     expect(await screen.findByText(/already been redeemed/)).toBeInTheDocument()
@@ -89,12 +91,13 @@ describe('RedeemPage English', () => {
 
   it('shows invalid token error', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
-      ok: true, status: 200, text: () => Promise.resolve(JSON.stringify({ code: 101, msg: 'Token不存在' }))
+      ok: true, status: 200, text: () => Promise.resolve(JSON.stringify({ code: 101, msg: 'Token������' }))
     } as unknown as Response)
     vi.stubGlobal('fetch', fetchMock)
     renderRedeem('/?t=BADBADBAD')
     const user = userEvent.setup()
     await user.type(screen.getByPlaceholderText(EMAIL_PH), 'a@b.com')
+    await user.type(screen.getByPlaceholderText(CONFIRM_PH), 'a@b.com')
     await user.click(screen.getByLabelText(/I agree to the Privacy Policy/))
     await user.click(screen.getByRole('button', { name: /Send my voucher/ }))
     expect(await screen.findByText(/Invalid Token/)).toBeInTheDocument()

@@ -5,7 +5,7 @@ import { defineConfig, loadEnv } from 'vite'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   return {
-    base: '/coupon/',
+    base: '/Voucher/',
     plugins: [react(), tailwindcss()],
     server: {
       host: '0.0.0.0',

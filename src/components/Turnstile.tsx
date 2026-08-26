@@ -20,9 +20,12 @@ export default function Turnstile({ onVerify, onExpire }: Props) {
         const cfg = await getCaptchaConfig();
         if (cancelled) return;
         setState({ type: cfg.captcha_type || "none", siteKey: cfg.site_key, enabled: cfg.enabled !== false && cfg.captcha_type !== "none", testMode: cfg.test_mode, testToken: cfg.test_token, loading: false });
-        if (!cfg.enabled || cfg.captcha_type === "none" || !cfg.site_key) {
+        if (!cfg.enabled || cfg.captcha_type === "none") {
           onVerify("");
           setVerified(true);
+        } else if (!cfg.site_key) {
+          setState({ type: cfg.captcha_type, siteKey: '', enabled: true, testMode: cfg.test_mode, testToken: cfg.test_token, loading: false, error: 'Captcha site key missing -- verification unavailable' });
+          return;
         }
       } catch {
         if (cancelled) return;
@@ -71,25 +74,18 @@ export default function Turnstile({ onVerify, onExpire }: Props) {
             "expired-callback": () => { setVerified(false); onVerify(""); onExpire?.(); },
             "error-callback": () => setVerified(false),
           });
-        } catch (e) { console.error("[recaptcha] grecaptcha.render throw", e); }
+        } catch {}
       };
-      const doRender = () => {
-        const g: any = window.grecaptcha;
-        if (!g) return;
-        const call = () => render();
-        try { if (g.ready) g.ready(call); else call(); } catch (e) { console.error("[recaptcha] render failed", e); try { call(); } catch (e2) { console.error(e2); } }
-      };
-      if (window.grecaptcha && (window.grecaptcha as any).render) doRender();
+      if (window.grecaptcha && (window.grecaptcha as any).render) render();
       else {
         const existing = document.querySelector('script[data-recaptcha]') as HTMLScriptElement | null;
         if (!existing) {
           const s = document.createElement("script");
           s.src = "https://www.google.com/recaptcha/api.js?render=explicit";
           s.async = true; s.defer = true; (s as any).dataset.recaptcha = "1";
-          s.onload = doRender;
-          s.onerror = () => setState(prev => ({ ...prev, error: "Failed to load reCAPTCHA script. Check network/VPN." }));
+          s.onload = render;
           document.head.appendChild(s);
-        } else { existing.addEventListener("load", doRender, { once: true }); existing.addEventListener("error", () => setState(prev => ({ ...prev, error: "Failed to load reCAPTCHA script." })), { once: true }); if ((window as any).grecaptcha) doRender(); }
+        } else existing.addEventListener("load", render, { once: true });
       }
       return () => { if (widgetId !== undefined && window.grecaptcha) try { window.grecaptcha.reset(widgetId); } catch {} };
     }
@@ -123,6 +119,9 @@ export default function Turnstile({ onVerify, onExpire }: Props) {
   }, [state, onVerify, onExpire]);
   if (state.loading) {
     return <div className="text-xs text-slate-500 bg-slate-100 rounded p-2">Loading verification...</div>;
+  }
+  if (state.error && !state.siteKey) {
+    return <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">Captcha unavailable -- please refresh or contact support. <span className="opacity-70">{state.error}</span></div>;
   }
   if (!state.enabled || state.type === "none") {
     return <div className="text-xs text-slate-500 bg-slate-100 rounded p-2">Dev mode: human verification bypassed (captcha_token=none)</div>;
