@@ -1,5 +1,5 @@
-// 面额来源：URL 参数 ?amt=<数字>（二维码生成端注入，见 docs/api 面额需求）。
-// 解析失败或缺失返回 null，由调用方走降级文案（"Claim your charging voucher"）。
+// Amount source: URL param ?amt=<number> (injected by QR generator, see docs/api).
+// Returns null if missing/invalid; caller falls back to "Claim your charging voucher".
 export function parseAmount(raw: string | null | undefined): number | null {
   if (!raw) return null;
   const n = Number(raw);

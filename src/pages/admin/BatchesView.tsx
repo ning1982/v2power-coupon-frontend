@@ -39,7 +39,7 @@ export default function BatchesView() {
 
       <div className="bg-surface-lowest rounded-[16px] shadow-m3-1 mt-4 overflow-hidden">
         <div className="px-5 py-4 border-b border-outline-variant"><h2 className="text-sm font-semibold text-on-surface">Batches</h2></div>
-        <table className="w-full" aria-label="批次列表">
+        <table className="w-full" aria-label="Batch list">
           <thead>
             <tr>
               <th scope="col" className="text-left px-5 py-2.5 text-[11px] uppercase tracking-wider text-on-surface-variant font-medium">Batch</th>

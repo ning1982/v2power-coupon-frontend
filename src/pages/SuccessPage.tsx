@@ -6,7 +6,7 @@ const WHATSAPP = import.meta.env.VITE_WHATSAPP || "https://wa.me/447868288666";
 export default function SuccessPage() {
   const loc = useLocation() as { state?: { email?: string; masked?: string } };
   const email = loc.state?.email;
-  // 防御性掩码：无论传入什么（后端脱敏值 / 完整邮箱 / 空），都再掩一次
+  // Defensive masking: re-mask regardless of input (masked from backend / full email / empty)
   const masked = maskEmail(loc.state?.masked ?? email ?? "");
 
   if (!email) {
@@ -40,7 +40,7 @@ export default function SuccessPage() {
               We sent your code to <b className="text-on-surface">{masked}</b>
             </p>
 
-            {/* 等待焦虑闭环：明确 ~30s 预期 */}
+            {/* Close waiting loop: set ~30s expectation */}
             <p className="text-sm text-on-surface mt-4 font-medium">Arrives in ~30 seconds.</p>
 
             <div className="bg-surface-container rounded-[12px] p-4 text-left text-sm text-on-surface-variant mt-3">
@@ -52,7 +52,7 @@ export default function SuccessPage() {
               </ul>
             </div>
 
-            {/* 主按钮：WhatsApp（去掉 mailto: 的 "Open email app"——它在手机上打开的是「写新邮件」而非收件箱，行为与文案不符） */}
+            {/* Primary CTA: WhatsApp (removed mailto Open email app - opens compose, not inbox) */}
             <a href={WHATSAPP} target="_blank" rel="noopener noreferrer" referrerPolicy="strict-origin-when-cross-origin" className="block w-full h-14 mt-4 rounded-full bg-primary text-on-primary font-medium text-sm leading-[56px]">WhatsApp support</a>
 
             <p className="text-xs text-on-surface-variant mt-3">For security, the code is never shown here.</p>

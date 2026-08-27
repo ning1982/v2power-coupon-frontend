@@ -84,7 +84,7 @@ export default function BatchDetailView() {
             >{f.label}</button>
           ))}
         </div>
-        <table className="w-full" aria-label="券列表">
+        <table className="w-full" aria-label="Voucher list">
           <thead>
             <tr>
               <th scope="col" className="text-left px-5 py-2.5 text-[11px] uppercase tracking-wider text-on-surface-variant font-medium">Token</th>

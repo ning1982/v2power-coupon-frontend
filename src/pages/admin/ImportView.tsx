@@ -2,7 +2,7 @@
 import { importVouchers, getQrUrl, downloadBatchZip } from "../../api/admin";
 
 export default function ImportView() {
-  const [batchName, setBatchName] = useState("202608-BP夏季促销");
+  const [batchName, setBatchName] = useState("202608-BP Summer Promo");
   const [amount, setAmount] = useState("10");
   const [expiry, setExpiry] = useState(() => { const d = new Date(); d.setFullYear(d.getFullYear()+1); return d.toISOString().slice(0,10); });
   const [fileName, setFileName] = useState<string | null>(null);
@@ -18,9 +18,9 @@ export default function ImportView() {
     try {
       const r = await importVouchers(f);
       const amt = amount.trim() === "" ? null : Number(amount);
-      setResult({ batchId: r.batch_id, batchName: batchName.trim() || "未命名批次", amount: amt === null || isNaN(amt) ? null : amt, expiry, imported: r.imported, skipped: r.skipped, tokens: r.tokens });
+      setResult({ batchId: r.batch_id, batchName: batchName.trim() || "Untitled batch", amount: amt === null || isNaN(amt) ? null : amt, expiry, imported: r.imported, skipped: r.skipped, tokens: r.tokens });
     } catch (e: any) {
-      setErr(e.message || "导入失败");
+      setErr(e.message || "Import failed");
       setResult(null);
     } finally {
       setLoading(false);
@@ -55,22 +55,22 @@ export default function ImportView() {
           <label htmlFor="file" className="mt-1 flex flex-col items-center justify-center border-2 border-dashed border-outline rounded-[16px] p-10 cursor-pointer text-center hover:border-primary">
             <div className="text-3xl opacity-50" aria-hidden>⬆</div>
             <p className="mt-2 text-sm text-on-surface"><b>{loading ? "Uploading..." : (fileName ?? "Click to upload")}</b></p>
-            <p className="text-xs text-on-surface-variant mt-1">.xls / .xlsx · 第1列 兑换编码 · 含表头</p>
+            <p className="text-xs text-on-surface-variant mt-1">.xls / .xlsx · Column 1: voucher code · header required</p>
             <input id="file" type="file" accept=".xls,.xlsx" className="sr-only" onChange={(e) => onFile(e.target.files?.[0] ?? null)} disabled={loading} />
           </label>
         </div>
 
         <div className="mt-4 flex gap-2">
-          <button onClick={downloadSample} className="text-xs h-8 px-3 rounded-full border border-outline text-on-surface-variant hover:bg-surface-high">下载测试 Excel（8条示例）</button>
-          <span className="text-xs text-on-surface-variant self-center">批次名/金额/有效期此版仅本地展示（后端 #1/#5 暂未存储）</span>
+          <button onClick={downloadSample} className="text-xs h-8 px-3 rounded-full border border-outline text-on-surface-variant hover:bg-surface-high">Download sample Excel (8 rows)</button>
+          <span className="text-xs text-on-surface-variant self-center">Batch name / amount / expiry shown locally only (not yet persisted - backend #1/#5 pending)</span>
         </div>
 
         <div className="mt-4 rounded-[12px] bg-surface-container p-4">
           <h3 className="text-sm font-medium text-on-surface">Excel format</h3>
           <code className="block mt-2 bg-surface-container-high rounded-[8px] p-3 font-mono text-xs leading-6">
-            兑换编码<br />V2P-KHWMYLOQ<br />V2P-FJCMFOBX<br />V2P-86BG1RY
+            voucher_code<br />V2P-KHWMYLOQ<br />V2P-FJCMFOBX<br />V2P-86BG1RY
           </code>
-          <p className="text-xs text-on-surface-variant mt-2">Column 1 = voucher code（批次名/金额/有效期在上方单独填）</p>
+          <p className="text-xs text-on-surface-variant mt-2">Column 1 = voucher code (batch name / amount / expiry set above)</p>
         </div>
 
         {err && <div className="mt-4 rounded-[12px] bg-error-container text-on-error-container p-3 text-sm" role="alert">{err}</div>}
@@ -97,8 +97,8 @@ export default function ImportView() {
 
       {result && result.tokens.length > 0 && (
         <div className="mt-6 bg-surface-lowest rounded-[16px] shadow-m3-1 p-6">
-          <h3 className="text-sm font-semibold text-on-surface">{result.batchName} — Tokens & QR preview {result.amount !== null ? `(£${result.amount} · 至 ${result.expiry})` : ""}</h3>
-          <p className="text-xs text-on-surface-variant mt-1">QR images from GET /admin/qr?token= · 扫码后兑换页通过 token 关联批次的金额/有效期</p>
+          <h3 className="text-sm font-semibold text-on-surface">{result.batchName} — Tokens & QR preview {result.amount !== null ? `(£${result.amount} · until ${result.expiry})` : ""}</h3>
+          <p className="text-xs text-on-surface-variant mt-1">QR images from GET /admin/qr?token= · redeem page resolves amount/expiry by token</p>
           <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {result.tokens.slice(0, 12).map((tok) => (
               <div key={tok} className="rounded-[12px] border border-outline-variant p-3 text-center">
@@ -109,7 +109,7 @@ export default function ImportView() {
               </div>
             ))}
           </div>
-          {result.tokens.length > 12 && <p className="text-xs text-on-surface-variant mt-3">共 {result.tokens.length} 个，ZIP 包含全部</p>}
+          {result.tokens.length > 12 && <p className="text-xs text-on-surface-variant mt-3">{result.tokens.length} total, ZIP contains all</p>}
         </div>
       )}
     </div>

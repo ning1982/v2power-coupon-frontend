@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import QRCode from "qrcode";
 import { fetchBatchDetail, type BatchDetail } from "../../api/admin";
 
-// 二维码指向的兑换页 base：优先环境变量，默认当前访问 origin（开发=tailscale，生产=域名）
+// Redeem page base for QR: prefers env var, defaults to current origin (dev=tailscale, prod=domain)
 const REDEEM_BASE = import.meta.env.VITE_REDEEM_BASE || `${window.location.origin}/coupon/`;
 
 function redeemUrl(token: string, amount: number | null): string {
@@ -124,7 +124,7 @@ const cardCss = `
   .vcard-amount sup { font-size: 14pt; font-weight: 700; top: -0.4em; margin-right: 0.5mm; position: relative; }
   .vcard-code { display: flex; flex-direction: column; gap: 0.6mm; }
   .vcard-code-label { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 4.5pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.75; }
-  .vcard-code-box { display: inline-flex; align-items: center; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 7.2pt; font-weight: 700; letter-spacing: 0.08em; padding: 1.2mm 2mm; border-radius: 1mm; line-height: 1; width: fit-content; }
+  .vcard-code-box { display: inline-flex; white-space: nowrap; word-break: keep-all; align-items: center; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 7.2pt; font-weight: 700; letter-spacing: 0.08em; padding: 1.2mm 2mm; border-radius: 1mm; line-height: 1; width: fit-content; }
   .vcard-foot { font-size: 4pt; font-weight: 500; margin-top: 1.2mm; opacity: 0.7; }
   .vcard-qr { background: #FFFFFF !important; padding: 2.2mm; border-radius: 1.8mm; display: flex; align-items: center; justify-content: center; box-shadow: 0 1mm 2.5mm rgba(0,0,0,0.08); }
   .vcard-qr-img { width: 22.6mm; height: 22.6mm; display: block; }
@@ -163,6 +163,9 @@ const cardCss = `
   .print-cards { display: grid; grid-template-columns: repeat(2, 85.6mm); grid-auto-rows: 54mm; gap: 8mm; justify-content: center; padding: 16px; background: #f1f5f9; }
   @media print {
     @page { size: A4 portrait; margin: 8mm; }
+    /* hide Admin chrome for clean print */
+    aside, header { display: none !important; }
+    main { overflow: visible !important; }
     .print-toolbar { display: none !important; }
     body { background: #fff !important; }
     .print-cards { background: #fff !important; gap: 7mm; padding: 0; }

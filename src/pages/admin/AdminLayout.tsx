@@ -12,7 +12,7 @@ export default function AdminLayout() {
           <span className="font-semibold text-on-surface">V2Power</span>
           <span className="ml-auto text-[10px] uppercase tracking-widest text-on-surface-variant border border-outline-variant rounded-full px-2 py-0.5">Admin</span>
         </div>
-        <nav aria-label="主导航" className="px-2 py-1 flex flex-col gap-0.5">
+        <nav aria-label="Main navigation" className="px-2 py-1 flex flex-col gap-0.5">
           <NavLink to="/admin/import" className={({ isActive }) => `flex items-center gap-3 h-11 px-3 rounded-full text-sm font-medium ${isActive ? "bg-secondary-container text-on-secondary-container" : "text-on-surface-variant hover:bg-surface-high"}`}>Import</NavLink>
           
         </nav>

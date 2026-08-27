@@ -36,7 +36,7 @@ export default function RedeemPage() {
     }
   }, [emailValue, form]);
 
-  // consent 校验失败 → 触发 shake（onAnimationEnd 自动归位，不用 setTimeout）
+  // Consent validation failed -> trigger shake (resets onAnimationEnd, no setTimeout)
   const consentError = !!form.formState.errors.consent;
   useEffect(() => {
     if (consentError) setShaking(true);
