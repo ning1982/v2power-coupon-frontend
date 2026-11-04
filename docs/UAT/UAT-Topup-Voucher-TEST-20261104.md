@@ -96,7 +96,7 @@
 | # | 问题 | 现象 |
 |---|---|---|
 | BUG-05 | 起充命令未发出且失败被吞 | `dispatchStart()` 里 `remote.startCharge` 的异常被 `catch(Exception unknown)` 静默吞掉，OCPP 日志里查不到对应 idTag 的任何记录，订单永久 `Starting`，App 永久 `PREPARING`，无任何出口（backend#574） |
-| BUG-06 | 强制关单不回收资金与券 | `POST /console/admin/orders/{id}/force-close` 只改订单状态，未释放 `v2p_charge_lock` / 钱包预授权 / 券锁定；该会员之后所有起充请求都被 `An existing charging session must be completed first.` 拒绝 |
+| BUG-06 | 强制关单不回收资金与券 | `POST /console/admin/orders/{id}/force-close` 只改订单状态，未释放 `v2p_charge_lock` / 钱包预授权 / 券锁定；该会员之后所有起充请求都被 `An existing charging session must be completed first.` 拒绝（修复：backend#575 + console#244，新增 `POST /admin/orders/{id}/release` 与 Console「Release start」） |
 | BUG-07 | 起充失败弹层 | 同时出现 `Retry` 与 `Try again` 两个按钮，语义重复；另有提示 `Using the reward choice from your previous start attempt.` |
 | BUG-08 | TEST 软件充电桩拒收电价 | 对 `V2POWER-CP-002` 发布 `DFTimePrices` 返回 `Rejected`，充电桩屏始终 `电价: 待下发`；POS 支付也未配置 |
 
