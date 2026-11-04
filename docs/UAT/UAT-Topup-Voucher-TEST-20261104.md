@@ -145,3 +145,9 @@ Stripe 侧无对应对象（本单现金腿是钱包、券腿是平台内部）�
 **顺带确认的展示问题**：订单详情顶部 `Cost` 只显示实付 £1.46，没算券抵扣的 £0.61（账单 £2.07），与 platform#1288 同一类问题，只是这次不是 0 而是「只显示现金部分」。
 
 截图：`w5-10-mixed-order-cost.png`（顶部成本）、`w5-11-mixed-order-refund.png`（退款后钱包明细）。
+
+## 9 兑换码与退款默认值（TOPUP-16，2026-11-04 18:40）
+
+- **App 兑换码不可用**：Console 新建的 `W5MIXED5` 和部署自带的 `WELCOME2` 在 App「Add a voucher」都提示 `Code not recognised`；同样的码用验收账号调 `POST /app/vouchers/redeem` 能正常发券（`voucher-0f7c45…`，£5 Current）。判断为 App 走的是 cash-v2 token 通路，见 platform#1294。截图：`w5-12-redeem-code-not-recognised.png`
+- **退款默认值**：混合订单（账单 £2.07 = 钱包 £1.46 + 券 £0.61）全额退款后 `cash_minor=207 / voucher_minor=0`，券被折成现金进钱包。原因是 `refund.voucher_destination` 默认与 TEST 节点都是 `wallet`（legacy 语义）。已改：backend#594 让默认「各退各的」，TEST 参数已切到 `voucher`（`/app/config` 回读一致），issue backend#593
+- Console 侧该参数一直可由运营在 `Console → Refund policy` 自助修改，无需发版
