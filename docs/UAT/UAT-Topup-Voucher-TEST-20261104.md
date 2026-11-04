@@ -31,6 +31,10 @@
 | TOPUP-05 | 全额退款回收 | Stripe TEST 全额退 £100 | 钱包回 £0、活动显示 `Funding refund −£100.00`、券从 Current 移除 | ✅（券归入 Expired 标签，见 BUG-02） | TOPUP-05-after-refund.png |
 | TOPUP-06 | Console 退款策略页 | 打开 `/console/refund-policy`；TEST 建 6 个参数节点后改冷静期 14→15 保存 | 页面可读写，接口回读一致 | ✅（回读 15，已还原 14） | TOPUP-06-console-refund-policy.png |
 | TOPUP-07 | 赠金档位充值 | 选 £200 档位（`+£20 bonus`）并支付 | 钱包入账 £220，含赠金 | ✅ | TOPUP-07-bonus-topup-and-refunds.png |
+| TOPUP-09 | Console 套餐表单（#234） | 打开编辑：Reward=Voucher、字段文案 `Voucher face value (pence)` / `Voucher validity (days)`；改百分比 5% 保存 | 列表显示 `Voucher 5%`，版本历史 `voucher 5` | ✅ | 见报告文字记录 |
+| TOPUP-10 | 奖励形式切换（#234 + #1205） | Console 改 5% → 切 `reward_kind=bonus` 保存；App 充值页 | App 显示 `£105.00 / Includes £5.00 bonus / +£5 bonus`（需重启 App，见 BUG-04）；切回固定 £10 券后重启显示 `+£10 voucher` | ✅（含 BUG-04） | TOPUP-08-percent-voucher-via-console.png |
+| TOPUP-11 | Refund policy 其余控件（#236） | 页面把 split_order 改 `proportional`、voucher_destination 改 `voucher` 保存 | 接口回读一致；已还原为 `cash_first` / `wallet` | ✅ | — |
+| TOPUP-12 | 参数非法值容错（#541） | 参数树把 `topup.used_bonus_recall` 设成 `bogus`，再做 £200 赠金充值 + 全额退款 | 退款正常完成（回落到默认 `after_window`），钱包回 £0，无 5xx | ✅ | 已还原参数 |
 | TOPUP-08 | 赠金档位退款（未用赠金） | Stripe TEST 全额退 £200 | 钱包回 £0：本金退回、未用赠金作废 | ✅（活动显示 `Funding refund (£200.00) −£220.00`） | TOPUP-07-bonus-topup-and-refunds.png |
 
 ## 4 缺陷
@@ -47,6 +51,7 @@
 |---|---|---|
 | BUG-02 | 召回后的券显示在 **Expired** 标签下 | 退款回收后券包 Current 0 / Expired 1，语义应为「已召回」 |
 | BUG-03 | 充值券详情 `Source` 显示 **Welcome reward** | 来源标签未覆盖 `topup` |
+| BUG-04 | App 会话内缓存充值档位 | Console 改奖励形式/面额后，App 不重启看不到变化（实测：voucher→bonus 切换后重开充值页仍是旧值，杀进程重启才更新） |
 
 ### 本版未包含（不算本版缺陷）
 
