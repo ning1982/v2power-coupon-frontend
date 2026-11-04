@@ -105,3 +105,23 @@
 TEST 会员 `zhangzlin79@gmail.com`（`jdy-96429a69163be232d58ff205`）当前被上述状态锁住：钱包 £90（£10 预授权未释放）、券 `Welcome charging voucher` 可用 £0.00（£10 已锁）。需要后端/DB 侧释放该订单的 charge lock、钱包 hold 与券预留后，才能继续第 6 节的用例。
 
 设备与 TEST 数据已还原：App 内 mock location 测试 provider 已移除，`station-clapham` 坐标改回 `51.4643 / -0.1707` 并复原位置模式，模拟器 4 把枪均已 `Unplug`。
+
+## 7 二维码起充全链路（TOPUP-14，2026-11-04 16:05）
+
+第 6 节一直起不了充，原因不在会员和券，而在**起充入口**：从 App 场站列表挑同一把枪再点 `Start charging`，后端会走 `RemoteStartTransaction`，TEST 软件桩不回包；**扫桩屏二维码进入**则走原生启动，不经过那次远程起充。
+
+| 步骤 | 结果 |
+|---|---|
+| 模拟器选 `Demo Ultra Clapham / 0701`，打开桩屏二维码 | 二维码显示在桩屏 |
+| 手机扫码 | App 直接进到 0701 的连接器页 |
+| 模拟器 `Plug in vehicle` | 桩 `Preparing` → App 自动开始 |
+| 充电中 | `CHARGING`，27%，**12.15 kWh**，350 kW，£8.38，时长 02:08 |
+| 长按 `Hold to stop` | `Session receipt`：Total paid £8.38，`Reservation returned £1.62` |
+| 拔枪 | 连接器回到 `Available`，`transactionId=null` |
+| 钱包 | £100.00 → **£91.62**（扣 £8.38）；券仍是 £8.99（扫码路径不选券） |
+
+订单 `web-order-d71680b7-6441-4e8a-a687-cc14e7aae1dc`：`Completed` / `Payed` / `pay_amount=838` / `charge_capacity=12150` / `pay_way=Wallet`。
+
+截图：`w5-06-charging-live.png`、`w5-07-session-receipt.png`、`w5-08-wallet-after-session.png`。
+
+**结论**：钱包支付的充停结算是通的；但「起充前选券」这条路（第 6 节）仍受 `RemoteStart` 不回包阻塞，属于 backend#574。券付订单的退款执行问题见 #587。
