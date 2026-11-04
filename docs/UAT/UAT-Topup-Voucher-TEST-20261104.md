@@ -65,3 +65,42 @@
 - 退款通过 Stripe TEST 全额退款触发，后端 webhook 正常处理（钱包回退 + 券召回）
 - **未覆盖**：「已用赠金/券」的追回需要真充电消耗后才有数据；TEST 当前 App 显示 0 个可用充电桩（`0 live chargers`），无法发起充电会话，因此 `voucher_claw_minor > 0` 与 `topup.used_bonus_recall` 的运行时效果本轮未验证
 - TEST 参数树原本为空，本轮为验证 Console 页面创建了 `topup.*` / `refund.*` 六个节点，值均为代码默认
+
+## 6 模拟器联调：充电订单 + 用券（TOPUP-13）
+
+目的：用 `https://test.v2power.173-212-201-169.sslip.io/simulator/live.html` 起一次真实充电，验证「起充前锁券 → 停充结算 → 用券抵扣 → 订单退款」链路。
+
+操作：
+
+1. 模拟器选 `Clapham Junction Hub` / `0201 · CCS2`，`Plug in vehicle`（车辆状态 `Preparing`）
+2. App 车站详情点 `Connector 1` → `Review & pay`，券区选中 `Welcome reward £10.00`（`1 selected`、`Available to apply £10.00`），点 `Start charging`
+3. App 停在 `PREPARING / Waiting for charger confirmation`，反复 `Check start status` 无进展
+
+结果：未能完成，卡在起充阶段。
+
+| 观测 | 值 |
+|---|---|
+| App 会话状态 | `PREPARING`，`0.00 kWh`，订单状态 `Starting`，`start_time=null` |
+| 模拟器 connector | 无 `transactionId`，状态在 `Preparing` / `Finishing` 间跳 |
+| 订单行（Console admin API） | `web-order-d4e4e1b8…`，`status=Starting`，`transaction_id=null`，`authorized_amount_minor=1000`，`payment_source=wallet` |
+| Console 强制关单后 | 订单变 `ForceClosed`，但**未释放**：`v2p_charge_lock`、钱包预授权 £10（余额仍 £90）、券可用额 £10（券包显示 `£0.00`） |
+| 再次起充（另一把枪 / 另一支付方式） | 返回 `An existing charging session must be completed first.`，会员已无法再发起任何充电 |
+
+截图：`TOPUP-13-review-pay-voucher.png`（选券确认页）、`TOPUP-13-voucher-held-after-force-close.png`（券包 £0.00）。
+
+模拟器侧另有配置缺口：该桩 `Charger screen` 显示 `NotConfigured / Waiting for price delivery`，`POS terminal` 显示 `Configure POS payment for this charge point in Console.`，两条设备侧起充路径均不可用。用 Console API 发布充电桩电价（`POST /console/admin/charge-points/by-ocpp/V2POWER-CP-002/screen/prices`）返回 `status=Rejected`、`detail=The charger did not accept the price configuration.`，即软件充电桩本身没有接收电价下发（操作后已改回 `enabled=false`，状态停在 `Paused`）。
+
+### 本轮新发现（下一版）
+
+| # | 问题 | 现象 |
+|---|---|---|
+| BUG-05 | 起充派发后无超时收敛 | 充电桩始终未回 `StartTransaction` 时，订单永久停在 `Starting`，App 永久 `PREPARING`，无任何出口（backend#563 的 reaper 未含在本版部署） |
+| BUG-06 | 强制关单不回收资金与券 | `POST /console/admin/orders/{id}/force-close` 只改订单状态，未释放 `v2p_charge_lock` / 钱包预授权 / 券锁定；该会员之后所有起充请求都被 `An existing charging session must be completed first.` 拒绝 |
+| BUG-07 | 起充失败弹层 | 同时出现 `Retry` 与 `Try again` 两个按钮，语义重复；另有提示 `Using the reward choice from your previous start attempt.` |
+| BUG-08 | TEST 软件充电桩拒收电价 | 对 `V2POWER-CP-002` 发布 `DFTimePrices` 返回 `Rejected`，充电桩屏始终 `电价: 待下发`；POS 支付也未配置 |
+
+### 现场残留（需要清理）
+
+TEST 会员 `zhangzlin79@gmail.com`（`jdy-96429a69163be232d58ff205`）当前被上述状态锁住：钱包 £90（£10 预授权未释放）、券 `Welcome charging voucher` 可用 £0.00（£10 已锁）。需要后端/DB 侧释放该订单的 charge lock、钱包 hold 与券预留后，才能继续第 6 节的用例。
+
+设备与 TEST 数据已还原：App 内 mock location 测试 provider 已移除，`station-clapham` 坐标改回 `51.4643 / -0.1707` 并复原位置模式，模拟器 4 把枪均已 `Unplug`。
