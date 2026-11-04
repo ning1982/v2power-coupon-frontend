@@ -125,3 +125,23 @@ TEST 会员 `zhangzlin79@gmail.com`（`jdy-96429a69163be232d58ff205`）当前被
 截图：`w5-06-charging-live.png`、`w5-07-session-receipt.png`、`w5-08-wallet-after-session.png`。
 
 **结论**：钱包支付的充停结算是通的；但「起充前选券」这条路（第 6 节）仍受 `RemoteStart` 不回包阻塞，属于 backend#574。券付订单的退款执行问题见 #587。
+
+## 8 混合支付（券 + 钱包）与退款（TOPUP-15，2026-11-04 18:23）
+
+用户手动在 App 完成一单混合支付：`V2Power Balham / 0101`，起充前选了券。
+
+| 项 | 值 |
+|---|---|
+| 订单 | `web-order-9a496f26-a8c6-4d7f-9317-803f21c9d69c` |
+| 电量 / 时长 | 3.00 kWh / 00:01:02，峰值 180 kW |
+| 账单 | £2.07（207 便士） |
+| 实付（钱包） | £1.46（146 便士） |
+| 券抵扣 | £0.61（61 便士） |
+
+**退款（默认 `refund.voucher_destination=wallet`）**：`POST /admin/orders/{id}/refund` 207 → `refund-ee1369ce…` 状态 `provider_confirmed`，`cash_minor=207`、`voucher_minor=0`；App 订单详情显示 `Returned to wallet £2.07`、`Reservation returned £8.54`，钱包 +£2.07，券余额未变（券抵扣部分折成钱回钱包）。
+
+Stripe 侧无对应对象（本单现金腿是钱包、券腿是平台内部），符合预期；卡通路（Checkout 充值退款 / 卡预授权起充）另行验证。
+
+**顺带确认的展示问题**：订单详情顶部 `Cost` 只显示实付 £1.46，没算券抵扣的 £0.61（账单 £2.07），与 platform#1288 同一类问题，只是这次不是 0 而是「只显示现金部分」。
+
+截图：`w5-10-mixed-order-cost.png`（顶部成本）、`w5-11-mixed-order-refund.png`（退款后钱包明细）。
